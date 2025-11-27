@@ -2,20 +2,20 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.storage import LocalFileStore
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.document_loaders import UnstructuredFileLoader
-from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.embeddings import  CacheBackedEmbeddings, OllamaEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.schema.runnable import RunnableLambda
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOllama
 from langchain.schema.runnable import RunnablePassthrough
 from langchain.callbacks.base import BaseCallbackHandler
 import time as t
 import streamlit as st
 
 st.set_page_config(
-   page_title="DocumentGPT",
+   page_title="PrivateGPT",
    page_icon="🤖"
 )
-st.title("DocumentGPT")
+st.title("PrivateGPT")
 
 class ChatCallbackHandler(BaseCallbackHandler):
    message = ""
@@ -30,7 +30,9 @@ class ChatCallbackHandler(BaseCallbackHandler):
       self.message += token
       self.message_box.markdown(self.message)
 
-llm = ChatOpenAI(
+
+llm = ChatOllama(
+   model="llama3.2:latest",
    temperature = 0.1,
    streaming = True,
    callbacks=[ChatCallbackHandler(),]
@@ -39,11 +41,11 @@ llm = ChatOpenAI(
 @st.cache_data(show_spinner="Embedding file...")
 def embed_file(file):
    file_content = file.read();
-   file_path = f"./.cache/files/{file.name}"
+   file_path = f"./.cache/private_files/{file.name}"
    with open(file_path, "wb") as f:
       f.write(file_content)
 
-   cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
+   cache_dir = LocalFileStore(f"./.cache/private_embeddings/{file.name}")
    splitter = CharacterTextSplitter.from_tiktoken_encoder(
       separator="\n",
       chunk_size=600,
@@ -56,7 +58,7 @@ def embed_file(file):
    docs = loader.load_and_split(text_splitter=splitter)
 
    # embeddings are vector representation, the meaning behind the text docsk
-   embeddings = OpenAIEmbeddings()
+   embeddings = OllamaEmbeddings(model="llama3.2:latest")
 
    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
 
